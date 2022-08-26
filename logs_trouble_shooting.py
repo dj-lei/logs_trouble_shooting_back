@@ -37,17 +37,24 @@ def query_index_logs():
 def query_key_values():
     if request.method == 'GET':
         es_ctrl = EsCtrl()
-        res = {}
-        print(request.args.get('index'))
+        story_line = {}
+        origin_index = {}
+        inverted_index_table = {}
         for index in request.args.get('index').split(','):
-            data = es_ctrl.query_index(cf['MAIN']['PREFIX'] + index)['story_line']
-            res[index] = {}
+            tmp = es_ctrl.query_index(cf['MAIN']['PREFIX'] + index)
+            data = tmp['story_line']
+            story_line[index] = {}
+            origin_index[index] = {}
+            inverted_index_table[index] = {}
             for dev in data.keys():
-                res[index][dev] = {}
+                story_line[index][dev] = {}
+                origin_index[index][dev]  = {}
+                inverted_index_table[index][dev] = tmp['inverted_index_table'][dev]
                 for process in data[dev]:
-                    res[index][dev][process['process']] = process['kv']
+                    story_line[index][dev][process['process']] = process['kv']
+                    origin_index[index][dev][process['process']]  = list(process['msg'].keys())
 
-        response = jsonify({'content': res})
+        response = jsonify({'story_line': story_line, 'origin_index': origin_index, 'inverted_index_table':inverted_index_table})
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
@@ -70,7 +77,8 @@ def query_indices():
 @app.route("/query_running_indices", methods=['GET'])
 def query_running_indices():
     if request.method == 'GET':
-        response = jsonify({'content': queue_check})
+        res = list(queue_check.keys()) + queue_running
+        response = jsonify({'content': res})
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
@@ -81,6 +89,10 @@ def query_running_indices():
 def post_log():
     if request.method == 'POST':
         files = request.files.getlist("file[]")
+        platform = request.form.get('platform')
+        product = request.form.get('product')
+        category = request.form.get('category')
+        uniqueid = request.form.get('uniqueid')
 
         for file in files:
         # if 'file' not in request.files:
@@ -90,8 +102,9 @@ def post_log():
         # # empty file without a filename.
         # if file.filename == '':
         #     return jsonify({'content': 'error'})
-            file.save(cf['ENV_'+env]['LOG_STORE_PATH']+file.filename.lower()+'.log')
-            queue_check[file.filename.lower()] = {'check': 0, 'count': 0, 'status': 'running'}
+            file_name = platform.lower()+'_'+product.lower()+'_'+category.lower()+'_'+uniqueid.lower()+'_'+file.filename.lower()
+            file.save(cf['ENV_'+env]['LOG_STORE_PATH']+file_name+'.log')
+            queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
 
         response = jsonify({'content': 'ok'})
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')

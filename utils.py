@@ -9,21 +9,22 @@ import pandas as pd
 ############################################ Data Clean ################################################
 def package_kv(df):
     res = {}
-    for i, kv in enumerate(df.kv.values):
+    for i, (kv,index) in enumerate(zip(df.kv.values, df['index'].values)):
         for item in kv:
             if len(item[1]) > 0:
                 if item[0] in res:
-                    res[item[0]].append(item[1] + [str(i)])
+                    res[item[0]].append(item[1] + [str(i)] + [index]) # [value1,value2,value3,process_index,global_index]
                 else:
-                    res[item[0]] = [item[1] + [str(i)]]
+                    res[item[0]] = [item[1] + [str(i)] + [index]]
     for key in res.keys():
         width = max(map(len, res[key])) # get max width
         for i, item in enumerate(res[key]):
             if len(item) != width:
                 tmp = [0 for _ in range(0, width)]
+                tmp[-2] = item[-2]
                 tmp[-1] = item[-1]
                 res[key][i] = tmp
-        res[key] = np.array(res[key]).transpose().tolist()
+        res[key] = np.array(res[key]).transpose().tolist() # matrix transposition
     return res
 
 
@@ -37,7 +38,7 @@ def package_inverted_index_table(table, key, data):
         for word in set(clean_special_symbols(msg).split(' ')):
             w = word.lower()
             if w not in table:
-                table[w] = {'x': [index], 'y': [key]}
+                table[w] = {'x': [index], 'y': [key]} # x:global index, y: yaxis num 
             else:
                 table[w]['x'].append(index)
                 table[w]['y'].append(key)
