@@ -9,18 +9,19 @@ import pandas as pd
 ############################################ Data Clean ################################################
 def package_kv(df):
     res = {}
-    for i, (kv,index) in enumerate(zip(df.kv.values, df['index'].values)):
+    for i, (kv,index,timestamp) in enumerate(zip(df.kv.values, df['index'].values, df.timestamp.values)):
         for item in kv:
             if len(item[1]) > 0:
                 if item[0] in res:
-                    res[item[0]].append(item[1] + [str(i)] + [index]) # [value1,value2,value3,process_index,global_index]
+                    res[item[0]].append(item[1]  + [timestamp] + [str(i)] + [index]) # [value1,value2,value3,timestamp,process_index,global_index]
                 else:
-                    res[item[0]] = [item[1] + [str(i)] + [index]]
+                    res[item[0]] = [item[1]  + [timestamp] + [str(i)] + [index]]
     for key in res.keys():
         width = max(map(len, res[key])) # get max width
         for i, item in enumerate(res[key]):
             if len(item) != width:
                 tmp = [0 for _ in range(0, width)]
+                tmp[-3] = item[-3]
                 tmp[-2] = item[-2]
                 tmp[-1] = item[-1]
                 res[key][i] = tmp
