@@ -59,16 +59,16 @@ def clean_data(esdata):
                 process = re.findall('process \= (.*?),', tmp)[0]
                 msg = re.findall('msg \= (.*?)$', tmp)[0]
             #                 fileAndLine = re.findall('fileAndLine \= \"(.*?)\"',item['_source']['msg'])[0].split(':')[0]
-            elif len(re.findall('procname \= (.*?)$', tmp)) > 0:
-                process = re.findall('procname \= (.*?),', tmp)[0]
-                #                 msg = tmp.split(',')[2].replace('"','').replace('}','').replace('{','')
-                msg = tmp
+            # elif len(re.findall('procname \= (.*?)$', tmp)) > 0:
+            #     process = re.findall('procname \= (.*?),', tmp)[0]
+            #     #                 msg = tmp.split(',')[2].replace('"','').replace('}','').replace('{','')
+            #     msg = tmp
             else:
                 process = 'main'
                 msg = tmp
 
             kv = [(k.strip(), re.findall('[0-9.|x]+', v)) for k, v in re.findall('([A-Za-z0-9_.]+?)[ ]?[:=][ ]?(.*?)[,$]', msg + '$')]  # $ convenient regex at the end
-            story.append([item['_source']['device'], item['_source']['trace'], process,  item['_source']['@timestamp'][:-1] + '.' + str(item['_source']['millisecond']) + 'Z', msg, kv])
+            story.append([item['_source']['device'], item['_source']['trace'], process,  item['_source']['logtime'][:-1] + '.' + str(item['_source']['millisecond']) + 'Z', msg, kv])
 
     story = pd.DataFrame(story, columns=['device', 'trace', 'process', 'timestamp', 'msg', 'kv']).sort_values('timestamp',ascending=True).reset_index(drop=True)
     story_line = {}
