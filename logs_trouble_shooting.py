@@ -38,23 +38,27 @@ def query_key_values():
     if request.method == 'GET':
         es_ctrl = EsCtrl()
         story_line = {}
+        key_type = {}
         origin_index = {}
         inverted_index_table = {}
         for index in request.args.get('index').split(','):
             tmp = es_ctrl.query_index(cf['MAIN']['PREFIX'] + index)
             data = tmp['story_line']
             story_line[index] = {}
+            key_type[index] = {}
             origin_index[index] = {}
             inverted_index_table[index] = {}
             for dev in data.keys():
                 story_line[index][dev] = {}
+                key_type[index][dev] = {}
                 origin_index[index][dev]  = {}
                 inverted_index_table[index][dev] = tmp['inverted_index_table'][dev]
                 for process in data[dev]:
                     story_line[index][dev][process['process']] = process['kv']
+                    key_type[index][dev][process['process']] = process['k_type']
                     origin_index[index][dev][process['process']]  = list(process['msg'].keys())
 
-        response = jsonify({'story_line': story_line, 'origin_index': origin_index, 'inverted_index_table':inverted_index_table})
+        response = jsonify({'story_line': story_line, 'key_type': key_type, 'origin_index': origin_index, 'inverted_index_table':inverted_index_table})
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')

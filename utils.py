@@ -9,6 +9,7 @@ import pandas as pd
 ############################################ Data Clean ################################################
 def package_kv(df):
     res = {}
+    k_type = {}
     for i, (kv,index,timestamp) in enumerate(zip(df.kv.values, df['index'].values, df.timestamp.values)):
         for item in kv:
             if len(item[1]) > 0:
@@ -18,7 +19,15 @@ def package_kv(df):
                     res[item[0]] = [item[1]  + [timestamp] + [str(i)] + [index]]
     for key in res.keys():
         width = max(map(len, res[key])) # get max width
+        type_list = []
         for i, item in enumerate(res[key]):
+            if '0x' in item[0]:
+                type_list.append('register')
+            elif item[0].isupper():
+                type_list.append('discrete')
+            else:
+                type_list.append('continuous')
+                
             if len(item) != width:
                 tmp = [0 for _ in range(0, width)]
                 tmp[-3] = item[-3]
@@ -26,7 +35,8 @@ def package_kv(df):
                 tmp[-1] = item[-1]
                 res[key][i] = tmp
         res[key] = np.array(res[key]).transpose().tolist() # matrix transposition
-    return res
+        k_type[key] = 'discrete' if len(set(type_list)) > 1 else list(set(type_list))[0]
+    return res,k_type
 
 
 def package_inverted_index_table(table, key, data):
@@ -68,7 +78,15 @@ def clean_data(esdata):
                 process = 'main'
                 msg = tmp
 
-            kv = [(k.strip(), re.findall('[0-9.|x]+', v)) for k, v in re.findall('([A-Za-z0-9_.]+?)[ ]?[:=][ ]?(.*?)[,$]', msg + '$')]  # $ convenient regex at the end
+            msg = msg.replace('= ',':').replace(' = ',':').replace(': ',':').replace(' : ',':').replace('=',':')
+
+            for elm in re.split('[: ]',msg):
+                if elm.isupper():
+                    msg = re.sub('[: ]'+elm, ':'+elm, msg)
+
+            msg = re.sub('(:(?!-).*?[ $])', r'\1,', (msg + ' $'))
+
+            kv = [(k.strip(), [v.strip()] if (v+' ')[0].isalpha() else re.findall('[0-9.|x]+', v)) for k, v in re.findall('([A-Za-z0-9_.]+?)[ ]?[:=][ ]?(.*?)[,$]', msg)]  # $ convenient regex at the end
             story.append([item['_source']['device'], item['_source']['trace'], process,  item['_source']['logtime'][:-1] + '.' + str(item['_source']['millisecond']) + 'Z', msg, kv])
 
     story = pd.DataFrame(story, columns=['device', 'trace', 'process', 'timestamp', 'msg', 'kv']).sort_values('timestamp',ascending=True).reset_index(drop=True)
@@ -88,11 +106,11 @@ def clean_data(esdata):
             msg = dict(zip(process['index'].values, [str(a) + '||' + b + '||' + c for a, b, c in
                                                      zip(process.index.values, process.timestamp.values,
                                                          process.msg.values)]))
-            kv = package_kv(process)
+            kv, k_type = package_kv(process)
             if dev not in story_line:
-                story_line[dev] = [{'process': process_name, 'start_time': process_start_time, 'start_count': process_start_count, 'end_time': process_end_time, 'end_count': process_end_count, 'msg': msg, 'kv': kv}]
+                story_line[dev] = [{'process': process_name, 'start_time': process_start_time, 'start_count': process_start_count, 'end_time': process_end_time, 'end_count': process_end_count, 'msg': msg, 'kv': kv, 'k_type':k_type}]
             else:
-                story_line[dev].append({'process': process_name, 'start_time': process_start_time, 'start_count': process_start_count, 'end_time': process_end_time, 'end_count': process_end_count, 'msg': msg, 'kv': kv})
+                story_line[dev].append({'process': process_name, 'start_time': process_start_time, 'start_count': process_start_count, 'end_time': process_end_time, 'end_count': process_end_count, 'msg': msg, 'kv': kv, 'k_type':k_type})
         inverted_index_table[dev] = sub_inverted_index_table
     return {'story_line': story_line, 'inverted_index_table': inverted_index_table}
 
