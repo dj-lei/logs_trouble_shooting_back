@@ -87,7 +87,7 @@ def clean_data(esdata):
             msg = re.sub('(:(?!-).*?[ $])', r'\1,', (msg + ' $'))
 
             kv = [(k.strip(), [v.strip()] if (v+' ')[0].isalpha() else re.findall('[0-9.|x]+', v)) for k, v in re.findall('([A-Za-z0-9_.]+?)[ ]?[:=][ ]?(.*?)[,$]', msg)]  # $ convenient regex at the end
-            story.append([item['_source']['device'], item['_source']['trace'], process,  item['_source']['logtime'][:-1] + '.' + str(item['_source']['millisecond']) + 'Z', msg, kv])
+            story.append([item['_source']['device'], item['_source']['trace'], process,  item['_source']['logtime'][:-1] + '.' + str(item['_source']['millisecond']) + 'Z', item['_source']['msg'], kv])
 
     story = pd.DataFrame(story, columns=['device', 'trace', 'process', 'timestamp', 'msg', 'kv']).sort_values('timestamp',ascending=True).reset_index(drop=True)
     story_line = {}
