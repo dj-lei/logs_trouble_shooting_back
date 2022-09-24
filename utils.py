@@ -115,9 +115,9 @@ def clean_data(esdata):
                                                          process.msg.values)]))
             kv, k_type = package_kv(process)
             if dev not in story_line:
-                story_line[dev] = [{'process': process_name, 'start_time': process_start_time, 'start_count': process_start_count, 'end_time': process_end_time, 'end_count': process_end_count, 'msg': msg, 'kv': kv, 'k_type':k_type}]
+                story_line[dev] = [{'process': process_name, 'start_time': process_start_time, 'start_count': process_start_count, 'end_time': process_end_time, 'end_count': process_end_count, 'msg': msg, 'kv': kv}]
             else:
-                story_line[dev].append({'process': process_name, 'start_time': process_start_time, 'start_count': process_start_count, 'end_time': process_end_time, 'end_count': process_end_count, 'msg': msg, 'kv': kv, 'k_type':k_type})
+                story_line[dev].append({'process': process_name, 'start_time': process_start_time, 'start_count': process_start_count, 'end_time': process_end_time, 'end_count': process_end_count, 'msg': msg, 'kv': kv})
         inverted_index_table[dev] = sub_inverted_index_table
     return {'story_line': story_line, 'inverted_index_table': inverted_index_table}
 
