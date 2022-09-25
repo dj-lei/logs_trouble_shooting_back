@@ -1,9 +1,22 @@
 import re
+import io
 import zlib
 import base64
+import zipfile
 import datetime
 import numpy as np
 import pandas as pd
+import configparser
+from sys import platform
+
+cf = configparser.ConfigParser()
+cf.read('config/config.cfg')
+
+env = 'DEVELOP'
+if 'win' in platform:
+    env = 'DEVELOP'
+elif 'linux' in platform:
+    env = 'PRODUCT'
 
 
 ############################################ Data Clean ################################################
@@ -41,7 +54,7 @@ def package_kv(df):
 
 def package_inverted_index_table(table, key, data):
     def clean_special_symbols(text):
-        for ch in ['/','*','{','}','[',']','(',')','#','+','-','!','=',':',',']:
+        for ch in ['/','*','{','}','[',']','(',')','#','+','-','!','=',':',',','"']:
             if ch in text:
                 text = text.replace(ch," ")
         return re.sub(" +", " ", text)
@@ -67,7 +80,7 @@ def clean_data(esdata):
         if 'msg' in item['_source']:
             tmp = clean_msg_special_symbols(item['_source']['msg'])
             if len(re.findall('process \= (.*?)$', tmp)) > 0:
-                process = re.findall('process \= (.*?),', tmp)[0]
+                process = re.findall('process \= (.*?),', tmp)[0].strip()
                 msg = re.findall('msg \= (.*?)$', tmp)[0]
             #                 fileAndLine = re.findall('fileAndLine \= \"(.*?)\"',item['_source']['msg'])[0].split(':')[0]
             # elif len(re.findall('procname \= (.*?)$', tmp)) > 0:
@@ -145,6 +158,88 @@ def apply_keyword_highlight(df, keywords, color_highlight):
 def cal_time_difference(start, end):
     return datetime.datetime.strptime(end, "%H:%M:%S") - datetime.datetime.strptime(start, "%H:%M:%S")
 
+############################################ judge file format and save ################################################
+def is_dcgm_zip(path):
+#     path = 'GLT_SUKAMULYA_CBN_CM_220715_064452_WIB_MSRBS-GL_CXP9024418-15_R24M11_dcgm.zip'
+#     path_logfiles = 'GLT_SUKAMULYA_CBN_CM_logfiles.zip'
+    path_logfiles = ''
+    teread = 'teread.log'
+    regex = '(.*?): \[(.*?)\] \((.*?)\) (.*?) (.*?): (.*?)$'
+    judge_count = 50
+    logs = {}
+    dev = ''
+    log_flag = False
+    is_extrac = False
+    with zipfile.ZipFile(path, 'r') as outer:
+        for file in outer.filelist:
+            if 'logfiles.zip' in file.filename:
+                path_logfiles = file.filename
+                break
+        if path_logfiles == '':
+            return False
+        else:
+            with outer.open(path_logfiles, 'r') as nest:
+                logfiles = io.BytesIO(nest.read())
+                with zipfile.ZipFile(logfiles) as nested_zip:
+                    with nested_zip.open(teread, 'r') as log:
+                        lines = log.readlines()
+                        count = 0
+                        for i, line in enumerate(lines):
+                            line = line.decode("utf-8")
+                            if len(line) > 0:
+                                if line[0] == '=':
+                                    log_flag = False
+                                    is_extrac = False
+                                    count = 0
+                            if log_flag:
+                                logs[dev].append(line[0:-1])
+                                if count < judge_count:
+                                    if (is_extrac == False):
+                                        count = count + 1
+                                        if len(re.findall(regex, line)) > 0:
+                                            is_extrac = True
+                                else:
+                                    if (is_extrac == False):
+                                        logs.pop(dev, None)
+                                        log_flag = False
+
+                            if ('coli>' in line) & ('te log read' in line):
+                                dev = line.split(' ')[1]
+                                logs[dev] = []
+                                log_flag = True
+    files = []
+    for key in logs.keys():
+        store_path = cf['ENV_'+env]['LOG_STORE_PATH'] + path.split('.zip')[0] +'_'+key+'_telog_'+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+'.log'
+        store_path = store_path.lower()
+        files.append(store_path)
+        with open(store_path, 'w') as fp:
+            fp.write("\n".join(item for item in logs[key]))
+    return True, files
+
+def is_telog(path):
+    res = []
+    regex = '(.*?): \[(.*?)\] \((.*?)\) (.*?) (.*?): (.*?)$'
+    judge_count = 50
+    is_extrac = False
+    with open(path, 'r') as log:
+        lines = log.readlines()
+        count = 0
+        for i, line in enumerate(lines):
+            line = line
+            res.append(line[0:-1])
+            if count < judge_count:
+                if (is_extrac == False):
+                    count = count + 1
+                    if len(re.findall(regex, line)) > 0:
+                        is_extrac = True
+            else:
+                if (is_extrac == False):
+                    return False
+    store_path = cf['ENV_'+env]['LOG_STORE_PATH'] + path + '_telog_' + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+'.log'
+    store_path = store_path.lower()
+    with open(store_path, 'w') as fp:
+        fp.write("\n".join(res))
+    return True, store_path
 
 ############################################ XML Compression and Decompression ################################################
 def decode_base64_and_inflate(b64string):

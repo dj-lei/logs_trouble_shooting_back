@@ -8,7 +8,7 @@ from es_ctrl import EsCtrl
 from flask import Flask, jsonify, request
 from apscheduler.schedulers.background import BackgroundScheduler
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 app = Flask(__name__)
 cf = configparser.ConfigParser()
 cf.read('config/config.cfg')
@@ -88,13 +88,13 @@ def query_running_indices():
 @app.route("/post_log", methods=['POST'])
 def post_log():
     if request.method == 'POST':
-        files = request.files.getlist("file[]")
-        platform = request.form.get('platform')
-        product = request.form.get('product')
-        category = request.form.get('category')
-        uniqueid = request.form.get('uniqueid')
+        file = request.files['file']
+        # platform = request.form.get('platform')
+        # product = request.form.get('product')
+        # category = request.form.get('category')
+        # uniqueid = request.form.get('uniqueid')
 
-        for file in files:
+        # for file in files:
         # if 'file' not in request.files:
         #     return jsonify({'content': 'error'})
         # file = request.files['file']
@@ -102,9 +102,21 @@ def post_log():
         # # empty file without a filename.
         # if file.filename == '':
         #     return jsonify({'content': 'error'})
-            file_name = platform.lower()+'_'+product.lower()+'_'+category.lower()+'_'+uniqueid.lower()+'_'+file.filename.lower()
-            file.save(cf['ENV_'+env]['LOG_STORE_PATH']+file_name+'.log')
-            queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
+        path = cf['ENV_'+env]['ORIGIN_FILE_STORE_PATH']+file.file_name
+        file.save(path)
+        if '.zip' in file.filename:
+            flag, filenames = is_dcgm_zip(path)
+            if  flag != True:
+                return jsonify({'content': 'error'})
+            else:
+                for file_name in filenames:
+                    queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
+        else:
+            flag, file_name = is_telog(path)
+            if flag != True:
+                return jsonify({'content': 'error'})
+            else:
+                queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
 
         response = jsonify({'content': 'ok'})
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')
@@ -115,6 +127,9 @@ def post_log():
 
 
 queue_check = {}
+# queue_running = ['visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog',
+# 'visby_6626_dcgm_xiaobo_le_pluis_if_bxp_2048_telog'
+# ]
 queue_running = []
 
 def scheduled_check_queue():
