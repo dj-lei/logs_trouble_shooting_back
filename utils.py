@@ -159,7 +159,7 @@ def cal_time_difference(start, end):
     return datetime.datetime.strptime(end, "%H:%M:%S") - datetime.datetime.strptime(start, "%H:%M:%S")
 
 ############################################ judge file format and save ################################################
-def is_dcgm_zip(path):
+def is_dcgm_zip(path, file_name):
 #     path = 'GLT_SUKAMULYA_CBN_CM_220715_064452_WIB_MSRBS-GL_CXP9024418-15_R24M11_dcgm.zip'
 #     path_logfiles = 'GLT_SUKAMULYA_CBN_CM_logfiles.zip'
     path_logfiles = ''
@@ -176,7 +176,7 @@ def is_dcgm_zip(path):
                 path_logfiles = file.filename
                 break
         if path_logfiles == '':
-            return False
+            return False,''
         else:
             with outer.open(path_logfiles, 'r') as nest:
                 logfiles = io.BytesIO(nest.read())
@@ -208,15 +208,19 @@ def is_dcgm_zip(path):
                                 logs[dev] = []
                                 log_flag = True
     files = []
-    for key in logs.keys():
-        store_path = cf['ENV_'+env]['LOG_STORE_PATH'] + path.split('.zip')[0] +'_'+key+'_telog_'+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+'.log'
-        store_path = store_path.lower()
-        files.append(store_path)
-        with open(store_path, 'w') as fp:
-            fp.write("\n".join(item for item in logs[key]))
-    return True, files
+    if len(logs.keys()) == 0:
+        return False, files
+    else:
+        for key in logs.keys():
+            index_name = file_name.split('.zip')[0] +'_'+key+'_telog_'+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+            index_name = index_name.lower()
+            store_path = cf['ENV_'+env]['LOG_STORE_PATH'] + index_name +'.log'
+            files.append(index_name)
+            with open(store_path, 'w') as fp:
+                fp.write("\n".join(item for item in logs[key]))
+        return True, files
 
-def is_telog(path):
+def is_telog_log(path, file_name):
     res = []
     regex = '(.*?): \[(.*?)\] \((.*?)\) (.*?) (.*?): (.*?)$'
     judge_count = 50
@@ -234,12 +238,40 @@ def is_telog(path):
                         is_extrac = True
             else:
                 if (is_extrac == False):
-                    return False
-    store_path = cf['ENV_'+env]['LOG_STORE_PATH'] + path + '_telog_' + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+'.log'
-    store_path = store_path.lower()
+                    return False, ''
+    
+    index_name = file_name + '_telog_' + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    index_name = index_name.lower()
+    store_path = cf['ENV_'+env]['LOG_STORE_PATH'] + index_name +'.log'
     with open(store_path, 'w') as fp:
         fp.write("\n".join(res))
-    return True, store_path
+    return True, index_name
+
+def is_lab_log(path, file_name):
+    res = []
+    regex = '\[(.*?)\] \((.*?)\) (.*?) (.*?): (.*?)$'
+    judge_count = 50
+    is_extrac = False
+    with open(path, 'r') as log:
+        lines = log.readlines()
+        count = 0
+        for i, line in enumerate(lines):
+            line = line
+            res.append(line[0:-1])
+            if count < judge_count:
+                if (is_extrac == False):
+                    count = count + 1
+                    if len(re.findall(regex, line)) > 0:
+                        is_extrac = True
+            else:
+                if (is_extrac == False):
+                    return False, ''
+    index_name = file_name + '_lab_' + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    index_name = index_name.lower()
+    store_path = cf['ENV_'+env]['LOG_STORE_PATH'] + index_name +'.log'
+    with open(store_path, 'w') as fp:
+        fp.write("\n".join(res))
+    return True, index_name
 
 ############################################ XML Compression and Decompression ################################################
 def decode_base64_and_inflate(b64string):

@@ -5,10 +5,10 @@ from utils import *
 from sys import platform
 from drawio import Drawio
 from es_ctrl import EsCtrl
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from apscheduler.schedulers.background import BackgroundScheduler
 
-# warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 app = Flask(__name__)
 cf = configparser.ConfigParser()
 cf.read('config/config.cfg')
@@ -19,6 +19,13 @@ if 'win' in platform:
 elif 'linux' in platform:
     env = 'PRODUCT'
 
+@app.after_request
+def apply_caching(response):
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
+    return response
+
 
 @app.route("/query_index_logs", methods=['GET'])
 def query_index_logs():
@@ -26,9 +33,6 @@ def query_index_logs():
         es_ctrl = EsCtrl()
         index =  cf['MAIN']['PREFIX'] + request.args.get('index')
         response = jsonify({'content': es_ctrl.query_index(index)})
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
         return response
     return jsonify({'content': 'error'})
 
@@ -55,9 +59,6 @@ def query_key_values():
                     origin_index[index][dev][process['process']]  = list(process['msg'].keys())
 
         response = jsonify({'story_line': story_line, 'origin_index': origin_index, 'inverted_index_table':inverted_index_table})
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
         return response
     return jsonify({'content': 'error'})
 
@@ -67,9 +68,6 @@ def query_indices():
     if request.method == 'GET':
         es_ctrl = EsCtrl()
         response = jsonify({'content': es_ctrl.query_indices()})
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
         return response
     return jsonify({'content': 'error'})
 
@@ -79,9 +77,6 @@ def query_running_indices():
     if request.method == 'GET':
         res = list(queue_check.keys()) + queue_running
         response = jsonify({'content': res})
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
         return response
 
 
@@ -89,40 +84,31 @@ def query_running_indices():
 def post_log():
     if request.method == 'POST':
         file = request.files['file']
-        # platform = request.form.get('platform')
-        # product = request.form.get('product')
-        # category = request.form.get('category')
-        # uniqueid = request.form.get('uniqueid')
-
-        # for file in files:
-        # if 'file' not in request.files:
-        #     return jsonify({'content': 'error'})
-        # file = request.files['file']
-        # # If the user does not select a file, the browser submits an
-        # # empty file without a filename.
-        # if file.filename == '':
-        #     return jsonify({'content': 'error'})
-        path = cf['ENV_'+env]['ORIGIN_FILE_STORE_PATH']+file.file_name
+        path = cf['ENV_'+env]['ORIGIN_FILE_STORE_PATH']+file.filename
         file.save(path)
+        flag = False
         if '.zip' in file.filename:
-            flag, filenames = is_dcgm_zip(path)
+            flag, filenames = is_dcgm_zip(path, file.filename)
             if  flag != True:
                 return jsonify({'content': 'error'})
             else:
                 for file_name in filenames:
                     queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
-        else:
-            flag, file_name = is_telog(path)
-            if flag != True:
-                return jsonify({'content': 'error'})
-            else:
+
+        if flag == False:
+            flag, file_name = is_telog_log(path, file.filename)
+            if flag == True:
                 queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
 
+        if flag == False:
+            flag, file_name = is_lab_log(path, file.filename)
+            if flag == True:
+                queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
+
+        if flag == False:
+            return Response("ERROR TEST", status=400)
+
         response = jsonify({'content': 'ok'})
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,*')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
-        return response
     return jsonify({'content': 'error'})
 
 
