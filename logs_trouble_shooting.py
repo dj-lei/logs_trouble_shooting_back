@@ -86,9 +86,16 @@ def post_log():
         file = request.files['file']
         path = cf['ENV_'+env]['ORIGIN_FILE_STORE_PATH']+file.filename
         file.save(path)
+
+        name = file.filename
+        if '.zip' in name:
+            name = name
+        else:
+            name = name.split('.')[0]
+
         flag = False
         if '.zip' in file.filename:
-            flag, filenames = is_dcgm_zip(path, file.filename)
+            flag, filenames = is_dcgm_zip(path, name)
             if  flag != True:
                 return jsonify({'content': 'error'})
             else:
@@ -96,12 +103,12 @@ def post_log():
                     queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
 
         if flag == False:
-            flag, file_name = is_telog_log(path, file.filename)
+            flag, file_name = is_telog_log(path, name)
             if flag == True:
                 queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
 
         if flag == False:
-            flag, file_name = is_lab_log(path, file.filename)
+            flag, file_name = is_lab_log(path, name)
             if flag == True:
                 queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
 
