@@ -97,13 +97,19 @@ def post_log():
         if '.zip' in file.filename:
             flag, filenames = is_dcgm_zip(path, name)
             if  flag != True:
-                return jsonify({'content': 'error'})
+                return Response("Log File Format ERROR!", status=400)
             else:
+                for file_name in filenames:
+                    queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
+        
+        if flag == False:
+            flag, filenames = is_multi_devices_telog_log(path, name)
+            if  flag == True:
                 for file_name in filenames:
                     queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
 
         if flag == False:
-            flag, file_name = is_telog_log(path, name)
+            flag, file_name = is_single_device_telog_log(path, name)
             if flag == True:
                 queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
 
@@ -113,7 +119,7 @@ def post_log():
                 queue_check[file_name] = {'check': 0, 'count': 0, 'status': 'running'}
 
         if flag == False:
-            return Response("ERROR TEST", status=400)
+            return Response("Log File Format ERROR!", status=400)
 
         response = jsonify({'content': 'ok'})
     return jsonify({'content': 'error'})

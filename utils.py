@@ -220,7 +220,54 @@ def is_dcgm_zip(path, file_name):
                 fp.write("\n".join(item for item in logs[key]))
         return True, files
 
-def is_telog_log(path, file_name):
+def is_multi_devices_telog_log(path, file_name):
+    res = []
+    regex = '(.*?): \[(.*?)\] \((.*?)\) (.*?) (.*?): (.*?)$'
+    judge_count = 50
+    logs = {}
+    dev = ''
+    log_flag = False
+    is_extrac = False
+    with open(path, 'r') as log:
+        lines = log.readlines()
+        count = 0
+        for i, line in enumerate(lines):
+            if len(line) > 0:
+                if line[0] == '=':
+                    log_flag = False
+                    is_extrac = False
+                    count = 0
+            if log_flag:
+                logs[dev].append(line[0:-1])
+                if count < judge_count:
+                    if (is_extrac == False):
+                        count = count + 1
+                        if len(re.findall(regex, line)) > 0:
+                            is_extrac = True
+                else:
+                    if (is_extrac == False):
+                        logs.pop(dev, None)
+                        log_flag = False
+
+            if ('coli>' in line) & ('te log read' in line):
+                dev = line.split(' ')[1]
+                logs[dev] = []
+                log_flag = True
+
+    files = []
+    if len(logs.keys()) == 0:
+        return False, files
+    else:
+        for key in logs.keys():
+            index_name = file_name +'_'+key+'_telog_'+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+            index_name = index_name.lower()
+            store_path = cf['ENV_'+env]['LOG_STORE_PATH'] + index_name +'.log'
+            files.append(index_name)
+            with open(store_path, 'w') as fp:
+                fp.write("\n".join(item for item in logs[key]))
+    return True, files
+
+def is_single_device_telog_log(path, file_name):
     res = []
     regex = '(.*?): \[(.*?)\] \((.*?)\) (.*?) (.*?): (.*?)$'
     judge_count = 50
