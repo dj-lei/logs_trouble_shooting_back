@@ -88,6 +88,14 @@ def post_log():
         file.save(path)
 
         name = file.filename
+        for ch in ['/','*','{','}','[',']','(',')','#','+','-','!','=',':',',','"',' ','.','\'']:
+            if ch in name:
+                name = name.replace(ch,"_")
+        name = re.sub("_+", "_", name)
+
+        if '.zip' in file.name:
+            name = name + '.zip'
+
         if '.zip' in name:
             name = name
         else:
