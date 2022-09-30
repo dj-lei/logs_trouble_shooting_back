@@ -107,7 +107,13 @@ def clean_data(esdata):
                         kv.append((k.strip()+'(d)', [v.strip()]))
                     else:
                         kv.append((k.strip()+'(c)', re.findall('[0-9.]+', v)))  # $ convenient regex at the end
-            story.append([item['_source']['device'], item['_source']['trace'], process,  item['_source']['logtime'][:-1] + '.' + str(item['_source']['millisecond']) + 'Z', item['_source']['msg'], kv])
+            
+            millisecond = str(item['_source']['millisecond'])
+            supply_zero = ''
+            for _ in range(0, 9-len(millisecond)):
+                supply_zero = supply_zero + '0'
+            millisecond = supply_zero + millisecond
+            story.append([item['_source']['device'], item['_source']['trace'], process,  item['_source']['logtime'][:-1] + '.' + millisecond, item['_source']['msg'], kv])
 
     story = pd.DataFrame(story, columns=['device', 'trace', 'process', 'timestamp', 'msg', 'kv']).sort_values('timestamp',ascending=True).reset_index(drop=True)
     story_line = {}
