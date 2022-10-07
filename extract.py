@@ -93,7 +93,7 @@ class FileExtract(object):
                             with nested_zip.open(teread, 'r') as file:
                                 return True, file.readlines()
                         except:
-                            return False, _
+                            return False, ''
 
     def is_extractable_file(self, lines):
         judge_count = int(cf['COMMON']['FILE_JUDGE_COUNT'])
