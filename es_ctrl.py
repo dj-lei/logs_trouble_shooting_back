@@ -1,18 +1,6 @@
 import json
-import configparser
-from sys import platform
 from utils import *
 from elasticsearch import Elasticsearch
-
-
-cf = configparser.ConfigParser()
-cf.read('config/config.cfg')
-
-env = 'DEVELOP'
-if 'win' in platform:
-    env = 'DEVELOP'
-elif 'linux' in platform:
-    env = 'PRODUCT'
 
 
 class EsCtrl(object):
