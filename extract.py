@@ -196,8 +196,8 @@ class FileExtract(object):
             for dev in cf['COMMON']['MATCH_DEVICE'].split(','):
                 if dev in device:
                     res = self.extract_kv_and_inverted_index_table(logs[device])
-                    self.save(cf['ENV_'+env]['LOG_STORE_PATH']+self.filename+'_'+device, res)
-                    self.save_filename.append(self.filename+'_'+device)
+                    self.save(cf['ENV_'+env]['LOG_STORE_PATH']+self.filename+'_'+device+'_'+datetime.datetime.now().strftime("%Y_%m_%d"), res)
+                    self.save_filename.append(self.filename+'_'+device+'_'+datetime.datetime.now().strftime("%Y_%m_%d"))
 
     def save(self, path, data):
         with open(path, 'wb') as save_file:
