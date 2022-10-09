@@ -201,6 +201,7 @@ class FileExtract(object):
 
     def save(self, path, data):
         with open(path, 'wb') as save_file:
-            save_file.write(deflate_and_base64_encode(json.dumps(data).encode('utf-8')))
+            save_file.write(gzip_compress(data))
+            # save_file.write(deflate_and_base64_encode(json.dumps(data).encode('utf-8')))
             # save_file.write(json.dumps(data))
 
