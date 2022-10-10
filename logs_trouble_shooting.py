@@ -5,7 +5,7 @@ from extract import *
 from flask import Flask, jsonify, request, Response, make_response
 from apscheduler.schedulers.background import BackgroundScheduler
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 app = Flask(__name__)
 
 
@@ -38,6 +38,15 @@ def query_index():
 def query_indices():
     if request.method == 'GET':
         response = jsonify({'content': indices})
+        return response
+    return jsonify({'content': 'error'})
+
+
+@app.route("/query_indices_memory", methods=['GET'])
+def query_indices_memory():
+    if request.method == 'GET':
+        print(indices_memory.keys())
+        response = jsonify({'content': {'indices': list(indices_memory.keys())}})
         return response
     return jsonify({'content': 'error'})
 

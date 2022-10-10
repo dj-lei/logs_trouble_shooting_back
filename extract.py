@@ -183,9 +183,9 @@ class FileExtract(object):
             if len(ret) > 0:
                 v = dict(zip(columns, ret[0]))
                 if 'device' not in v:
-                    v['device'] = '_' + v['name']
+                    v['device'] = v['name'].strip()
                 else:
-                    v['device'] = v['device'] + '_' + v['name']
+                    v['device'] = v['device'].strip() + '_' + v['name'].strip()
                 
                 if v['device'] not in logs:
                     logs[v['device']] = []
