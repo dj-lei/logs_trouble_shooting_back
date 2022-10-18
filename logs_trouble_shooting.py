@@ -23,7 +23,7 @@ def query_index():
         if request.args.get('index') in indices_memory:
             S = indices_memory[request.args.get('index')]
         else:
-            index =  cf['ENV_'+env]['LOG_STORE_PATH'] + request.args.get('index')
+            index = cf['ENV_'+env]['LOG_STORE_PATH'] + request.args.get('index')
             with open(index, "rb") as myfile:
                 S = myfile.read()
                 indices_memory[request.args.get('index')] = S

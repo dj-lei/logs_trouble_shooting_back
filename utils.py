@@ -24,7 +24,7 @@ elif 'linux' in platform:
 
 
 def clean_special_symbols(text, symbol):
-    for ch in ['/','*','{','}','[',']','(',')','#','+','-','!','=',':',',','"','\'']:
+    for ch in ['/','*','{','}','[',']','(',')','#','+','-','!','=',':',',','"','\'','>','<','@','`','$','%','^','&','|']:
         if ch in text:
             text = text.replace(ch,symbol)
     return re.sub(symbol+"+", symbol, text)

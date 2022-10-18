@@ -167,10 +167,6 @@ class FileExtract(object):
                 tmp[global_index] = {'timestamp':timestamp, 'msg': msg}
             msgs[process_name] = tmp
 
-        # sorted inverted_index_table key
-        # for key in inverted_index_table.keys():
-        #     inverted_index_table[key] = sorted(inverted_index_table[key])
-
         return {'origin_logs':msgs, 'kv': kvs, 'inverted_index_table': inverted_index_table}
 
     def extract(self):
