@@ -1,8 +1,7 @@
 import atexit
-import random
 import warnings
 from utils import *
-from extract import *
+from extract_new import *
 from flask import Flask, jsonify, request, Response, make_response
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -18,25 +17,11 @@ def apply_caching(response):
     return response
 
 
-@app.route("/hello", methods=['GET'])
-def hello():
-    return jsonify({'content': 'hello'})
-
-
+test_file = FileExtract('exiosuu_LTE_TALAGAKOCAK_GH_BXP_2053_telog')
 @app.route("/query_index", methods=['GET'])
 def query_index():
     if request.method == 'GET':
-        if request.args.get('index') in indices_memory:
-            S = indices_memory[request.args.get('index')]
-        else:
-            index = cf['ENV_'+env]['LOG_STORE_PATH'] + request.args.get('index')
-            with open(index, "rb") as myfile:
-                S = myfile.read()
-                indices_memory[request.args.get('index')] = S
-        response = make_response(S)
-        response.headers.add('Content-length', len(S))
-        response.headers.add('Content-Encoding', 'gzip')
-        return response
+        return jsonify({'origin_lines': test_file.origin_lines, 'inverted_index_table': test_file.inverted_index_table})
     return jsonify({'content': 'error'})
 
 
@@ -82,11 +67,6 @@ def post_log():
         return jsonify({'content': 'ok'})
     return jsonify({'content': 'error'})
 
-
-@app.route("/get_random", methods=['GET'])
-def get_random():
-    if request.method == 'GET':
-        return jsonify({'content': random.uniform(1, 10)})
 
 queue_running = []
 queue_running_name = []
