@@ -86,7 +86,17 @@ def post_log():
 @app.route("/get_random", methods=['GET'])
 def get_random():
     if request.method == 'GET':
-        return jsonify({'content': random.uniform(1, 10)})
+        str1 = "non gated power value in dBFS:-32768.000 \
+        gated power value in dBFS:-32768.000 \
+         \
+        (Done RdId:0, RdPort:1)"
+        cmd = request.args.get('cmd')
+        regex = request.args.get('regex')
+
+        if regex == '':
+            return jsonify({'content': str1})
+        else:
+            return jsonify({'content': re.findall(regex, str1)})
 
 queue_running = []
 queue_running_name = []
