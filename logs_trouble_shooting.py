@@ -3,6 +3,7 @@ import random
 import warnings
 from utils import *
 from extract import *
+from telnet import TelnetClient
 from flask import Flask, jsonify, request, Response, make_response
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -124,6 +125,8 @@ scheduler.add_job(func=scheduled_running_queue, trigger="interval", seconds=3)
 scheduler.add_job(func=scheduled_clear_indices_memory, trigger="interval", seconds=86400) #after 24 hour, clear indices_memory 
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown(wait=False))
+
+telnet_client = TelnetClient()
 if __name__ == '__main__':
     indices = iterate_files_in_directory(cf['ENV_'+env]['LOG_STORE_PATH'])
     for index in indices:
@@ -131,4 +134,11 @@ if __name__ == '__main__':
             with open(cf['ENV_'+env]['LOG_STORE_PATH'] + index, "rb") as myfile:
                 S = myfile.read()
             indices_memory[index] = S
+
+    host_ip = '10.166.153.85'
+    username = 'root'
+    password = 'root'
+    # command = 'lhsh CPRI_5A rdsh 1 srv pwrmeas dlpwr get branch_e'
+    telnet_client.login_host(host_ip,username,password)
+
     app.run(host='0.0.0.0', port=8000)
