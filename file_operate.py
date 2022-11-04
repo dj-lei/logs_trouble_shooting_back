@@ -36,9 +36,6 @@ class SearchAtom(object):
         self.exp_search = ''
         self.exp_regex = ''
         self.exp_kv_range = ''
-        self.res_kv = {}
-        self.res_search_lines = []
-        self.res_regex_lines = []
         self.retrieval_exp = {}
         self.cmd_words = []
         self.res = {'res_search_lines': [], 'res_kv':{}}
@@ -120,7 +117,7 @@ class SearchAtom(object):
                     for index, reg in enumerate(regex_res):
                         flag, value = is_type_correct(key_type[n_regex][index], reg)
                         if flag:
-                            key_value[key_name[n_regex][index]].append({'name': key_name[n_regex][index], 'global_index': line, 'search_index': search_index, 'value': value, 'timestamp': c_time})
+                            key_value[key_name[n_regex][index]].append({'name': key_name[n_regex][index], 'type': key_type[n_regex][index], 'global_index': line, 'search_index': search_index, 'value': value, 'timestamp': c_time})
                     break
         self.res['res_kv'] = key_value
         
@@ -175,13 +172,13 @@ class FileOperate(object):
     def __init__(self, file):
         self.inverted_index_table = {}
         self.search_atoms = {}
-        # content = file.read()
-        # content = str(content, 'utf-8')
-        # self.lines = content.split('\r\n')
-        # self.generate_inverted_index_table()
-        with open(file, 'r') as f:
-            self.lines = f.readlines()
-            self.generate_inverted_index_table()
+        content = file.read()
+        content = str(content, 'utf-8')
+        self.lines = content.split('\r\n')
+        self.generate_inverted_index_table()
+        # with open(file, 'r') as f:
+        #     self.lines = f.readlines()
+        #     self.generate_inverted_index_table()
     
     def generate_inverted_index_table(self):
         for index, line in enumerate(self.lines):
@@ -201,8 +198,26 @@ class FileOperate(object):
     def change(self, uid, desc, exp_search, exp_regex, exp_kv_range):
         self.search_atoms[uid].change(desc, exp_search, exp_regex, exp_kv_range)
 
-    def extract_kv(self):
-        pass
+    def sort(self, key_value_select):
+        selected_key = {}
+        for searchAtom in key_value_select['children']:
+            for key in searchAtom['children']:
+                if key['check'] == True:
+                    selected_key[searchAtom['name']+'.'+key['name']] = self.search_atoms[searchAtom['uid']].res['res_kv'][key['name']]
+
+        final = {}
+        for key in selected_key.keys():
+            tmp = list(selected_key.keys())
+            tmp.remove(key)
+            res = pd.DataFrame()
+            res = res.append(pd.DataFrame(selected_key[key]))
+            for s_key in tmp:
+                res = res.append(pd.DataFrame(selected_key[s_key])).reset_index(drop=True)
+            res = res.drop_duplicates(['timestamp'])
+            res = res.sort_values('timestamp', ascending=True).reset_index(drop=True).loc[(res['name'] == key.split('.')[-1]), :].reset_index()
+            res = res.rename(columns={"index": "graph_index"})
+            final[key] = json.loads(res.to_json(orient='records'))
+        return json.dumps(final)
 
     def filter_kv_range(self):
         pass

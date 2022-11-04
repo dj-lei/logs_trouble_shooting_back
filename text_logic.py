@@ -37,18 +37,12 @@ def search():
         return jsonify({'uid': uid, 'content': files[filename].search_atoms[uid].res})
     return jsonify({'content': 'error'})
 
-@app.route("/change", methods=['GET'])
-def change():
+@app.route("/sort", methods=['GET'])
+def sort():
     if request.method == 'GET':
         filename = request.args.get('filename')
-        uid = request.args.get('uid')
-        desc = request.args.get('desc')
-        exp_search = request.args.get('exp_search')
-        exp_regex = request.args.get('exp_regex')
-        exp_kv_range = request.args.get('exp_kv_range')
-        exp_judge = request.args.get('exp_judge')
-        uid = files[filename].search_atoms[uid].change(desc, exp_search, exp_regex, exp_kv_range)
-        return jsonify({'uid': uid, 'content': files[filename].search_atoms[uid].res})
+        key_value_select = json.loads(request.args.get('keyValueSelect'))
+        return jsonify({'content': files[filename].sort(key_value_select)})
     return jsonify({'content': 'error'})
 
 @app.route("/delete_search", methods=['GET'])
