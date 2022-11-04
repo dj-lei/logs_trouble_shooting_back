@@ -5,6 +5,7 @@ import time
 import json
 import zlib
 import gzip
+import uuid
 import base64
 import zipfile
 import datetime

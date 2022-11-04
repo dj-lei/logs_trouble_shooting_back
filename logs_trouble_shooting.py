@@ -87,21 +87,22 @@ def post_log():
 @app.route("/get_random", methods=['GET'])
 def get_random():
     if request.method == 'GET':
-        # str1 = "non gated power value in dBFS:-32768.000 \
-        # gated power value in dBFS:-32768.000 \
-        #  \
+        # res = "non gated power value in dBFS:-32768.000\n \
+        # gated power value in dBFS:-32768.000\n \
+        # \n \
         # (Done RdId:0, RdPort:1)"
-        cmd = request.args.get('cmd')
-        regex = request.args.get('regex')
-        if cmd == '':
-            return jsonify({'content': ''})
-        else:
-            res = telnet_client.execute_some_command(cmd)
+        # cmd = request.args.get('cmd')
+        # regex = request.args.get('regex')
+        # if cmd == '':
+        #     return jsonify({'content': res})
+        # else:
+        #     res = telnet_client.execute_some_command(cmd)
 
-        if regex == '':
-            return jsonify({'content': res})
-        else:
-            return jsonify({'content': re.findall(regex, res)})
+        # if regex == '':
+        #     return jsonify({'content': res})
+        # else:
+        #     return jsonify({'content': re.findall(regex, res)})
+        return jsonify({'content': random.randint(0,10)})
 
 queue_running = []
 queue_running_name = []
@@ -139,10 +140,10 @@ if __name__ == '__main__':
                 S = myfile.read()
             indices_memory[index] = S
 
-    host_ip = '10.166.153.85'
-    username = 'root'
-    password = 'root'
+    # host_ip = '10.166.153.85'
+    # username = 'root'
+    # password = 'root'
     # command = 'lhsh CPRI_5A rdsh 1 srv pwrmeas dlpwr get branch_e'
-    telnet_client.login_host(host_ip,username,password)
+    # telnet_client.login_host(host_ip,username,password)
 
     app.run(host='0.0.0.0', port=8000)
