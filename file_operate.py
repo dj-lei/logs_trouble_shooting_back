@@ -1,4 +1,5 @@
 from utils import *
+import ray
 
 def analysis_express(cmd):
     left_p = []
@@ -49,7 +50,7 @@ class SearchAtom(object):
             self.exp_regex = exp_regex
             self.exp_kv_range = exp_kv_range
             self.search()
-            self.regex()
+            # self.regex()
             self.kv_range()
             return
 
@@ -169,17 +170,19 @@ class SearchAtom(object):
 
 
 class FileOperate(object):
-    def __init__(self, file):
+    def __init__(self, file, cores):
+        self.cores = cores
         self.inverted_index_table = {}
         self.search_atoms = {}
         content = file.read()
         content = str(content, 'utf-8')
         self.lines = content.split('\r\n')
-        self.generate_inverted_index_table()
+        self.extract_inverted_index()
+        # self.generate_inverted_index_table()
         # with open(file, 'r') as f:
         #     self.lines = f.readlines()
         #     self.generate_inverted_index_table()
-    
+
     def generate_inverted_index_table(self):
         for index, line in enumerate(self.lines):
             for word in set(clean_special_symbols(line,' ').split(' ')):
@@ -219,8 +222,20 @@ class FileOperate(object):
             final[key] = json.loads(res.to_json(orient='records'))
         return json.dumps(final)
 
-    def filter_kv_range(self):
-        pass
+    def extract_inverted_index(self):
+        result = []
+        width = int(len(self.lines) / len(self.cores))
+        for cpu_n in range(len(self.cores)):
+            result.append(self.cores[cpu_n].extract.remote(self.lines[cpu_n*width : (cpu_n+1)*width], cpu_n*width, (cpu_n+1)*width))
+        tmp = ray.get(result)
+
+        inverted_index_table = {}
+        for core in tmp:
+            for key in core.keys():
+                if key not in inverted_index_table:
+                    inverted_index_table[key] = core[key]
+                else:
+                    inverted_index_table[key].extend(core[key]) 
 
     def delete_search_atom(self):
         pass

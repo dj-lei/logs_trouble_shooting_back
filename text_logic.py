@@ -1,8 +1,13 @@
 import warnings
-from file_operate import FileOperate
+from file_parallel import *
 from utils import *
+from file_operate import FileOperate
 from flask import Flask, jsonify, request, Response, make_response
 app = Flask(__name__)
+
+cores = []
+for core in range(num_cpus):
+    cores.append(FileParallel.remote())
 
 @app.after_request
 def apply_caching(response):
@@ -16,7 +21,7 @@ files = {}
 def open_file():
     if request.method == 'POST':
         file = request.files['file']
-        files[file.filename] = FileOperate(file)
+        files[file.filename] = FileOperate(file, cores)
         return jsonify({'lines': files[file.filename].lines, 'inverted_index_table':list(files[file.filename].inverted_index_table.keys())})
     return jsonify({'content': 'error'})
 
