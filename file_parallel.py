@@ -1,9 +1,5 @@
 import ray
 
-ray.init(ignore_reinit_error=True)
-num_cpus = int(ray.cluster_resources()["CPU"] / 4 * 3)
-
-
 def clean_special_symbols(text, symbol):
     for ch in ['/','*','{','}','[',']','(',')','#','+','-','!','=',':',',','"','\'','>','<','@','`','$','%','^','&','|']:
         if ch in text:

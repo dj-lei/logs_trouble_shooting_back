@@ -31,37 +31,38 @@ def analysis_express(cmd):
     return exp_res
 
 class SearchAtom(object):
-    def __init__(self, parent, desc, exp_search, exp_regex, exp_kv_range):
+    def __init__(self, parent, desc, exp_search, exp_regex, highlights):
         self.parent = parent
         self.desc = ''
         self.exp_search = ''
         self.exp_regex = ''
-        self.exp_kv_range = ''
+        self.highlights = []
         self.retrieval_exp = {}
         self.cmd_words = []
-        self.res = {'res_search_lines': [], 'res_kv':{}}
-        self.change(desc, exp_search, exp_regex, exp_kv_range)
+        self.res = {'res_search_lines': [], 'res_kv':{}, 'res_inverted_index_table':{}, 'res_highlights':{}}
+        self.change(desc, exp_search, exp_regex, highlights)
 
-    def change(self, desc, exp_search, exp_regex, exp_kv_range):
+    def change(self, desc, exp_search, exp_regex, highlights):
         self.desc = desc
 
         if self.exp_search != exp_search:
             self.exp_search = exp_search
             self.exp_regex = exp_regex
-            self.exp_kv_range = exp_kv_range
+            self.highlights = highlights
             self.search()
-            # self.regex()
-            self.kv_range()
+            self.regex()
+            self.highlight()
             return
 
         if self.exp_regex != exp_regex:
             self.exp_regex = exp_regex
             self.regex()
-            self.kv_range()
+            self.highlight()
             return
 
-        if self.exp_kv_range != exp_kv_range:
-            self.kv_range()
+        if self.highlights != highlights:
+            self.highlights = highlights
+            self.highlight()
             return
 
     def search(self):
@@ -119,18 +120,32 @@ class SearchAtom(object):
                         flag, value = is_type_correct(key_type[n_regex][index], reg)
                         if flag:
                             key_value[key_name[n_regex][index]].append({'name': key_name[n_regex][index], 'type': key_type[n_regex][index], 'global_index': line, 'search_index': search_index, 'value': value, 'timestamp': c_time})
+                    
+                    for word in set(clean_special_symbols(self.parent.lines[line],' ').split(' ')):
+                        if len(word) > 0:
+                            if not word[0].isdigit():
+                                if (word not in self.res['res_inverted_index_table']):
+                                    self.res['res_inverted_index_table'][word] = [{'name':word, 'type': 'word', 'global_index': line, 'search_index':search_index, 'value': word, 'timestamp': c_time}]
+                                else:
+                                    self.res['res_inverted_index_table'][word].append({'name':word, 'type': 'word', 'global_index': line, 'search_index':search_index, 'value': word, 'timestamp': c_time})
                     break
         self.res['res_kv'] = key_value
-        
-    def kv_range(self):
-        pass
-        # exp_res = analysis_express(self.exp_kv_range)
 
-        # self.retrieval_exp = {}
-        # for exp in exp_res.keys():
-        #     self.retrieval_exp[exp] = self.retrieval_kv_range(exp_res[exp])
+    def highlight(self):
+        def udpate_value(item, value):
+            item['value'] = value
+            return item
 
-        # self.res_regex_lines = self.retrieval_exp['@exp0_0']
+        res_highlights = {}
+        for item in self.highlights:
+            for word in item[0].split(','):
+                for ii_word in self.res['res_inverted_index_table'].keys():
+                    if word.strip().lower() == ii_word.strip().lower():
+                        if word.strip().lower() not in res_highlights:
+                            res_highlights[word.strip().lower()] = list(map(udpate_value, self.res['res_inverted_index_table'][ii_word], [item[1] for _ in range(len(self.res['res_inverted_index_table'][ii_word]))]))
+                        else:
+                            res_highlights[word.strip().lower()] = res_highlights[word.strip().lower()].extend(list(map(udpate_value, self.res['res_inverted_index_table'][ii_word], [item[1] for _ in range(len(self.res['res_inverted_index_table'][ii_word]))])))
+        self.res['res_highlights'] = res_highlights
 
     def retrieval_words(self, express):
         params = []
@@ -165,23 +180,17 @@ class SearchAtom(object):
                 res.update(global_index)
         return list(res)
 
-    def retrieval_kv_range(self, express):
-        pass
-
 
 class FileOperate(object):
-    def __init__(self, file, cores):
+    def __init__(self, filename, cores):
         self.cores = cores
         self.inverted_index_table = {}
         self.search_atoms = {}
-        content = file.read()
-        content = str(content, 'utf-8')
-        self.lines = content.split('\r\n')
-        self.extract_inverted_index()
-        # self.generate_inverted_index_table()
-        # with open(file, 'r') as f:
-        #     self.lines = f.readlines()
-        #     self.generate_inverted_index_table()
+        self.filename = filename
+        with open(self.filename, 'r') as f:
+            self.lines = f.readlines()
+            self.extract_inverted_index()
+            # self.generate_inverted_index_table()
 
     def generate_inverted_index_table(self):
         for index, line in enumerate(self.lines):
@@ -193,20 +202,23 @@ class FileOperate(object):
                         else:
                             self.inverted_index_table[word].append(index)
 
-    def search(self, desc, exp_search, exp_regex, exp_kv_range):
+    def search(self, desc, exp_search, exp_regex, highlights):
         uid = str(uuid.uuid4()).replace('-','')
-        self.search_atoms[uid] = SearchAtom(self, desc, exp_search, exp_regex, exp_kv_range)
+        self.search_atoms[uid] = SearchAtom(self, desc, exp_search, exp_regex, highlights)
         return uid
 
-    def change(self, uid, desc, exp_search, exp_regex, exp_kv_range):
-        self.search_atoms[uid].change(desc, exp_search, exp_regex, exp_kv_range)
+    def change(self, uid, desc, exp_search, exp_regex, highlights):
+        self.search_atoms[uid].change(desc, exp_search, exp_regex, highlights)
 
     def sort(self, key_value_select):
         selected_key = {}
         for searchAtom in key_value_select['children']:
             for key in searchAtom['children']:
                 if key['check'] == True:
-                    selected_key[searchAtom['name']+'.'+key['name']] = self.search_atoms[searchAtom['uid']].res['res_kv'][key['name']]
+                    data_type = self.search_atoms[searchAtom['uid']].res['res_kv'][key['name']][0]['type']
+                    selected_key[searchAtom['name']+'.'+data_type+'.'+key['name']] = self.search_atoms[searchAtom['uid']].res['res_kv'][key['name']]
+            for highlight in self.search_atoms[searchAtom['uid']].res['res_highlights'].keys():
+                selected_key[searchAtom['name']+'.highlight.'+highlight] = self.search_atoms[searchAtom['uid']].res['res_highlights'][highlight]
 
         final = {}
         for key in selected_key.keys():
@@ -214,10 +226,14 @@ class FileOperate(object):
             tmp.remove(key)
             res = pd.DataFrame()
             res = res.append(pd.DataFrame(selected_key[key]))
+            res['full_name'] = key
             for s_key in tmp:
-                res = res.append(pd.DataFrame(selected_key[s_key])).reset_index(drop=True)
+                temp = pd.DataFrame(selected_key[s_key])
+                temp['full_name'] = s_key
+                res = res.append(temp).reset_index(drop=True)
             res = res.drop_duplicates(['timestamp'])
-            res = res.sort_values('timestamp', ascending=True).reset_index(drop=True).loc[(res['name'] == key.split('.')[-1]), :].reset_index()
+            res = res.sort_values('timestamp', ascending=True).reset_index(drop=True)
+            res = res.loc[(res['full_name'] == key), :].reset_index()
             res = res.rename(columns={"index": "graph_index"})
             final[key] = json.loads(res.to_json(orient='records'))
         return json.dumps(final)
@@ -229,13 +245,12 @@ class FileOperate(object):
             result.append(self.cores[cpu_n].extract.remote(self.lines[cpu_n*width : (cpu_n+1)*width], cpu_n*width, (cpu_n+1)*width))
         tmp = ray.get(result)
 
-        inverted_index_table = {}
         for core in tmp:
             for key in core.keys():
-                if key not in inverted_index_table:
-                    inverted_index_table[key] = core[key]
+                if key not in self.inverted_index_table:
+                    self.inverted_index_table[key] = core[key]
                 else:
-                    inverted_index_table[key].extend(core[key]) 
+                    self.inverted_index_table[key].extend(core[key]) 
 
     def delete_search_atom(self):
         pass
